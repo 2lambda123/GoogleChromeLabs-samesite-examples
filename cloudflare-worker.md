@@ -27,26 +27,25 @@ will:
 
 The `COOKIEMAP` can be used to apply a given `SameSite` value to the stated cookie.
 
-
 ```javascript
 /*
  * Try https://samesite-proxy.rowan.workers.dev/proxied
  */
 
 // Site to proxy
-const TARGET = 'samesite-sandbox.glitch.me';
+const TARGET = "samesite-sandbox.glitch.me";
 
 // Valid SameSite values
-const STRICT = 'Strict';
-const LAX = 'Lax';
-const NONE = 'None';
+const STRICT = "Strict";
+const LAX = "Lax";
+const NONE = "None";
 
 // Cookie names and the corresponding SameSite value to enforce
 const SAMESITE_MAP = {
   ck06: STRICT,
   ck07: LAX,
   ck08: NONE,
-  ck09: NONE
+  ck09: NONE,
 };
 
 // Strip any invalid SameSite attributes from cookies
@@ -60,16 +59,16 @@ const APPLY_DEFAULT_SAMESITE = LAX;
 const APPLY_SECURE_SAMESITE_NONE = true;
 
 // Mitigation strategy - sniff the user-agent and only add attribute for supported browsers
-const UA_SNIFF = 'ua-sniff';
+const UA_SNIFF = "ua-sniff";
 // Mitigation strategy - send two versions of the cookie, one with SameSite, one without
-const DOUBLE_COOKIE = 'double-cookie';
+const DOUBLE_COOKIE = "double-cookie";
 // Prefix to use when doubling cookies
-const LEGACY_PREFIX = 'legacy_';
+const LEGACY_PREFIX = "legacy_";
 
 // Cookie names and the corresponding mitigation strategy to apply
 const MITIGATION_MAP = {
   ck08: UA_SNIFF,
-  ck09: DOUBLE_COOKIE
+  ck09: DOUBLE_COOKIE,
 };
 
 APPLY_DEFAULT_MITIGATION = DOUBLE_COOKIE;
@@ -83,8 +82,10 @@ async function handleRequest(request) {
 
   // Regex to split comma-separated Set-Cookie headers
   // Warning: it's a regex, who knows what's going on in there.
-  const cookies = alteredHeaders.get('set-cookie').match(/[^,|\s].+?(?=, \S+=|$)/g);
-  alteredHeaders.delete('set-cookie');
+  const cookies = alteredHeaders
+    .get("set-cookie")
+    .match(/[^,|\s].+?(?=, \S+=|$)/g);
+  alteredHeaders.delete("set-cookie");
 
   // Will test the useragent for compatibility, but only need to do that once per request
   let isClientSameSiteNoneIncompatible = null;
@@ -100,101 +101,105 @@ async function handleRequest(request) {
     let sameSiteIdx = null;
 
     if (
-      isClientSameSiteNoneIncompatible === null
-      && (MITIGATION_MAP[cookieName] === UA_SNIFF || APPLY_DEFAULT_MITIGATION === UA_SNIFF)
-      && request.headers.get('user-agent')
+      isClientSameSiteNoneIncompatible === null &&
+      (MITIGATION_MAP[cookieName] === UA_SNIFF ||
+        APPLY_DEFAULT_MITIGATION === UA_SNIFF) &&
+      request.headers.get("user-agent")
     ) {
-      isClientSameSiteNoneIncompatible = isSameSiteNoneIncompatible(request.headers.get('user-agent'));
+      isClientSameSiteNoneIncompatible = isSameSiteNoneIncompatible(
+        request.headers.get("user-agent"),
+      );
     }
 
     directives.forEach((directive, index) => {
       const lcDirective = directive.toLowerCase();
 
       switch (lcDirective) {
-        case 'secure':
+        case "secure":
           isSecure = true;
           break;
-        case 'samesite=strict':
+        case "samesite=strict":
           hasSameSite = STRICT;
           sameSiteIdx = index;
           break;
-        case 'samesite=lax':
+        case "samesite=lax":
           hasSameSite = LAX;
           sameSiteIdx = index;
           break;
-        case 'samesite=none':
+        case "samesite=none":
           hasSameSite = NONE;
           sameSiteIdx = index;
           break;
       }
 
       // Remove any invalid SameSite values
-      if (REMOVE_INVALID_SAMESITE && !hasSameSite && lcDirective.startsWith('samesite=')) {
+      if (
+        REMOVE_INVALID_SAMESITE &&
+        !hasSameSite &&
+        lcDirective.startsWith("samesite=")
+      ) {
         directives.splice(index, 1);
       }
     });
 
     // Apply specified SameSite attribute values
-    const shouldSkip = (
-      isClientSameSiteNoneIncompatible
-      && (
-        (SAMESITE_MAP[cookieName] === NONE && MITIGATION_MAP[cookieName] === UA_SNIFF)
-        || APPLY_DEFAULT_MITIGATION === UA_SNIFF
-      )
-    );
+    const shouldSkip =
+      isClientSameSiteNoneIncompatible &&
+      ((SAMESITE_MAP[cookieName] === NONE &&
+        MITIGATION_MAP[cookieName] === UA_SNIFF) ||
+        APPLY_DEFAULT_MITIGATION === UA_SNIFF);
 
     if (SAMESITE_MAP[cookieName] && !hasSameSite && !shouldSkip) {
-      directives.push('SameSite=' + SAMESITE_MAP[cookieName]);
+      directives.push("SameSite=" + SAMESITE_MAP[cookieName]);
       hasSameSite = SAMESITE_MAP[cookieName];
       sameSiteIdx = directives.length - 1;
     }
 
     // Apply a default SameSite value if configured
-    const shouldSkipDefault = (isClientSameSiteNoneIncompatible && APPLY_DEFAULT_SAMESITE === NONE);
+    const shouldSkipDefault =
+      isClientSameSiteNoneIncompatible && APPLY_DEFAULT_SAMESITE === NONE;
 
     if (APPLY_DEFAULT_SAMESITE && !hasSameSite && !shouldSkipDefault) {
-      directives.push('SameSite=' + APPLY_DEFAULT_SAMESITE);
+      directives.push("SameSite=" + APPLY_DEFAULT_SAMESITE);
       sameSiteIdx = directives.length - 1;
     }
 
     // Apply double cookie mitigation for SameSite=None where specified
     if (
-      (
-        MITIGATION_MAP[cookieName] === DOUBLE_COOKIE
-        || APPLY_DEFAULT_MITIGATION === DOUBLE_COOKIE
-      )
-      && hasSameSite === NONE
+      (MITIGATION_MAP[cookieName] === DOUBLE_COOKIE ||
+        APPLY_DEFAULT_MITIGATION === DOUBLE_COOKIE) &&
+      hasSameSite === NONE
     ) {
       const doubledDirectives = directives.slice(1);
-      doubledDirectives.unshift(LEGACY_PREFIX + cookieName + '=' + cookieValue);
+      doubledDirectives.unshift(LEGACY_PREFIX + cookieName + "=" + cookieValue);
       doubledDirectives.splice(sameSiteIdx, 1);
-      alteredHeaders.append('set-cookie', doubledDirectives.join('; '));
+      alteredHeaders.append("set-cookie", doubledDirectives.join("; "));
     }
 
     // Apply SameSite=None must include Secure if configured
     if (APPLY_SECURE_SAMESITE_NONE && hasSameSite === NONE && !isSecure) {
-      directives.push('Secure');
+      directives.push("Secure");
     }
 
-    alteredHeaders.append('set-cookie', directives.join('; '));
+    alteredHeaders.append("set-cookie", directives.join("; "));
   }
 
   const alteredResponse = new Response(response.body, {
     status: response.status,
     statusText: response.statusText,
-    headers: alteredHeaders
+    headers: alteredHeaders,
   });
 
   return alteredResponse;
 }
 
 function coalesceLegacyCookies(request) {
-  const cookiePairs = request.headers.get('cookie').split(/;\s+/);
+  const cookiePairs = request.headers.get("cookie").split(/;\s+/);
   const cookies = {};
   const legacyCookies = {};
 
   cookiePairs.forEach((cookie, index) => {
-    const equalsIdx = cookie.indexOf('=');
+    const equalsIdx = cookie.indexOf("=");
     let cookieName = cookie.slice(0, equalsIdx);
     const cookieValue = cookie.slice(equalsIdx + 1);
 
@@ -210,16 +215,16 @@ function coalesceLegacyCookies(request) {
   const alteredCookiePairs = [];
 
   Object.entries(alteredCookies).forEach(([key, value]) => {
-    alteredCookiePairs.push(key + '=' + value);
+    alteredCookiePairs.push(key + "=" + value);
   });
 
   request = new Request(request);
-  request.headers.set('cookie', alteredCookiePairs.join('; '));
+  request.headers.set("cookie", alteredCookiePairs.join("; "));
 
   return request;
 }
 
-addEventListener('fetch', event => {
+addEventListener("fetch", (event) => {
   const request = coalesceLegacyCookies(event.request);
   event.respondWith(handleRequest(request));
 });
@@ -231,14 +236,18 @@ function shouldSendSameSiteNone(useragent) {
 
 // Classes of browsers known to be incompatible.
 function isSameSiteNoneIncompatible(useragent) {
-  return hasWebKitSameSiteBug(useragent) ||
-    dropsUnrecognizedSameSiteCookies(useragent);
+  return (
+    hasWebKitSameSiteBug(useragent) ||
+    dropsUnrecognizedSameSiteCookies(useragent)
+  );
 }
 
 function hasWebKitSameSiteBug(useragent) {
-  return isIosVersion(12, useragent) ||
+  return (
+    isIosVersion(12, useragent) ||
     (isMacosxVersion(10, 14, useragent) &&
-      (isSafari(useragent) || isMacEmbeddedBrowser(useragent)));
+      (isSafari(useragent) || isMacEmbeddedBrowser(useragent)))
+  );
 }
 
 function dropsUnrecognizedSameSiteCookies(useragent) {
@@ -246,9 +255,11 @@ function dropsUnrecognizedSameSiteCookies(useragent) {
     return !isUcBrowserVersionAtLeast(12, 13, 2, useragent);
   }
 
-  return isChromiumBased(useragent) &&
+  return (
+    isChromiumBased(useragent) &&
     isChromiumVersionAtLeast(51, useragent) &&
-    !isChromiumVersionAtLeast(67, useragent);
+    !isChromiumVersionAtLeast(67, useragent)
+  );
 }
 
 // Regex parsing of User-Agent string. (See note above!)
@@ -263,18 +274,17 @@ function isMacosxVersion(major, minor, useragent) {
   const regex = /\(Macintosh;.*Mac OS X (\d+)_(\d+)[_\d]*.*\) AppleWebKit\//g;
   // Extract digits from first and second capturing groups.
   const match = useragent.match(regex);
-  return match && (match[0] == major) &&
-    (match[1] == minor);
+  return match && match[0] == major && match[1] == minor;
 }
 
 function isSafari(useragent) {
   const safari_regex = /Version\/.* Safari\//g;
-  return safari_regex.test(useragent) &&
-    !isChromiumBased(useragent);
+  return safari_regex.test(useragent) && !isChromiumBased(useragent);
 }
 
 function isMacEmbeddedBrowser(useragent) {
-  const regex = /^Mozilla\/[\.\d]+ \(Macintosh;.*Mac OS X [_\d]+\) AppleWebKit\/[\.\d]+ \(KHTML, like Gecko\)$/g;
+  const regex =
+    /^Mozilla\/[\.\d]+ \(Macintosh;.*Mac OS X [_\d]+\) AppleWebKit\/[\.\d]+ \(KHTML, like Gecko\)$/g;
   return regex.test(useragent);
 }
 
