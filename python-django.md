@@ -19,9 +19,9 @@
 Once [the fix in this pull request](https://github.com/django/django/pull/11894) is
 released (currently scheduled for [Django 3.1, stable in Aug 2020](https://code.djangoproject.com/wiki/Version3.1Roadmap)), you will be able to use:
 
- * [`CSRF_COOKIE_SAMESITE`](https://docs.djangoproject.com/en/3.0/ref/settings/#csrf-cookie-samesite)` = 'None'`
- * [`LANGUAGE_COOKIE_SAMESITE`](https://docs.djangoproject.com/en/3.0/ref/settings/#language-cookie-samesite)` = 'None'`
- * [`SESSION_COOKIE_SAMESITE`](https://docs.djangoproject.com/en/3.0/ref/settings/#session-cookie-samesite)`= 'None'`
+- [`CSRF_COOKIE_SAMESITE`](https://docs.djangoproject.com/en/3.0/ref/settings/#csrf-cookie-samesite)` = 'None'`
+- [`LANGUAGE_COOKIE_SAMESITE`](https://docs.djangoproject.com/en/3.0/ref/settings/#language-cookie-samesite)` = 'None'`
+- [`SESSION_COOKIE_SAMESITE`](https://docs.djangoproject.com/en/3.0/ref/settings/#session-cookie-samesite)`= 'None'`
 
 This will also allow the `'None'` string in the [`HttpResponse.set_cookie()`](https://docs.djangoproject.com/en/3.0/ref/request-response/#django.http.HttpResponse.set_cookie) method.
 
@@ -32,4 +32,3 @@ def home(request, template):
     response.set_cookie(key='cross-site-cookie', value='bar', samesite='None', secure=True)
     return response
 ```
-
